@@ -26,6 +26,7 @@ A lightweight Web Client wrapper with some extra features.
 - **Control Video Brightness** Change video brightness with `alt + [`and `alt + ]`.
 - **Picture in Picture Mode**: Toggle between normal and picture-in-picture mode with a simple keyboard shortcut `alt + P`.
 - **RTX VSR**: Works with NVIDIA RTX Super Resolution, making your media extra crisp.
+- **RTX HDR**: Works with NVIDIA RTX HDR, making SDR content better looking on HDR monitors.
 
 ![explorer_zNifHSnvI8](./Assets/Screenshots/pip.jpg)
 
