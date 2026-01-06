@@ -80,22 +80,16 @@ pub fn toggle_pip<R: Runtime>(
             .set_decorations(saved_state.decorations)
             .map_err(|e| format!("Failed to restore decorations: {}", e))?;
 
-        // Make sure window is visible and focused
+        // Make sure window is visible
         window
             .show()
             .map_err(|e| format!("Failed to show window: {}", e))?;
-        window
-            .set_focus()
-            .map_err(|e| format!("Failed to focus window: {}", e))?;
 
         // Restore maximized state if it was maximized before
         if saved_state.maximized {
-            println!("Restoring maximized state");
             window
                 .maximize()
                 .map_err(|e| format!("Failed to restore maximized state: {}", e))?;
-        } else {
-            println!("Window was not maximized before, not restoring maximized state");
         }
 
         let _ = window.set_title("Media On Tauri");
@@ -126,7 +120,6 @@ pub fn toggle_pip<R: Runtime>(
         // Save maximized state
         if let Ok(maximized) = window.is_maximized() {
             current_state.maximized = maximized;
-            println!("Saved maximized state: {}", maximized);
         }
 
         // Store the current state
@@ -140,7 +133,7 @@ pub fn toggle_pip<R: Runtime>(
 
         use tauri::{PhysicalPosition, PhysicalSize};
 
-        let screen_size = *monitor.size(); // Dereference to get owned PhysicalSize
+        let screen_size = *monitor.size();
         let pip_width = (screen_size.width as f64 * 0.3) as i32;
         let pip_height = (screen_size.height as f64 * 0.2) as i32;
         let pip_size = PhysicalSize {
@@ -154,8 +147,8 @@ pub fn toggle_pip<R: Runtime>(
         let _ = window.set_always_on_top(true);
         window
             .set_position(tauri::Position::Physical(PhysicalPosition {
-                x: (screen_size.width as i32 - pip_width - 50).max(0), // Right edge with 50px margin
-                y: (screen_size.height as i32 - pip_height - 150).max(0), // Bottom edge with 150px margin
+                x: (screen_size.width as i32 - pip_width - 50).max(0),
+                y: (screen_size.height as i32 - pip_height - 150).max(0),
             }))
             .map_err(|e| format!("Failed to set PIP position: {}", e))?;
 
@@ -165,9 +158,6 @@ pub fn toggle_pip<R: Runtime>(
         window
             .show()
             .map_err(|e| format!("Failed to show window: {}", e))?;
-        window
-            .set_focus()
-            .map_err(|e| format!("Failed to focus window: {}", e))?;
         let _ = window.set_title("Media On Tauri PIP MODE");
     }
 
