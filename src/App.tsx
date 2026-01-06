@@ -4,6 +4,8 @@ import "./App.css";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 // Detect if running on macOS
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -15,6 +17,8 @@ function App() {
     const [url, setUrl] = useState("https://app.plex.tv/desktop");
     const [zoomLevel, setZoomLevel] = useState(1.0);
     const [tauriVersion, setTauriVersion] = useState<string | null>(null);
+    const [updateAvailable, setUpdateAvailable] = useState<{ version: string; body: string } | null>(null);
+    const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
     // Load saved URL from store and set up initial window state when component mounts
     useEffect(() => {
@@ -34,6 +38,16 @@ function App() {
                 // Get Tauri version
                 const version = await getVersion();
                 setTauriVersion(version);
+
+                // Check for updates
+                try {
+                    const update = await check();
+                    if (update) {
+                        setUpdateAvailable({ version: update.version, body: update.body || "" });
+                    }
+                } catch {
+                    // Silently fail - update check is not critical
+                }
             } catch (err) {
                 console.error("Failed during initialization:", err);
                 // Make window visible even if there was an error
@@ -61,6 +75,40 @@ function App() {
             console.debug("URL saved successfully:", url);
         } catch (err) {
             console.error("Failed to save URL:", err);
+        }
+    };
+
+    const installUpdate = async () => {
+        try {
+            setUpdateStatus("Downloading update...");
+            const update = await check();
+            if (update) {
+                let downloaded = 0;
+                let contentLength = 0;
+                await update.downloadAndInstall((event) => {
+                    switch (event.event) {
+                        case "Started":
+                            contentLength = event.data.contentLength ?? 0;
+                            setUpdateStatus("Downloading: 0%");
+                            break;
+                        case "Progress":
+                            downloaded += event.data.chunkLength;
+                            if (contentLength > 0) {
+                                const percent = Math.round((downloaded / contentLength) * 100);
+                                setUpdateStatus(`Downloading: ${percent}%`);
+                            }
+                            break;
+                        case "Finished":
+                            setUpdateStatus("Installing...");
+                            break;
+                    }
+                });
+                setUpdateStatus("Restarting...");
+                await relaunch();
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            setUpdateStatus(`Update failed: ${errorMsg}`);
         }
     };
 
@@ -99,6 +147,24 @@ function App() {
             <div className="confirmation-container">
                 <h2>Welcome to Media On Tauri</h2>
                 {tauriVersion && <p>App Version: {tauriVersion}</p>}
+                {updateAvailable && (
+                    <div className="update-banner">
+                        <p>Update available: v{updateAvailable.version}</p>
+                        {updateStatus ? (
+                            <p className="update-status">{updateStatus}</p>
+                        ) : (
+                            <button onClick={installUpdate} type="button" className="update-button">
+                                Install Update
+                            </button>
+                        )}
+                        {isMac && (
+                            <p className="gatekeeper-note">
+                                After updating, run in Terminal to bypass Gatekeeper:
+                                <code className="gatekeeper-command">xattr -cr /Applications/Media\ On\ Tauri.app</code>
+                            </p>
+                        )}
+                    </div>
+                )}
                 <p>
                     Repository:{" "}
                     <a

@@ -283,3 +283,50 @@ h2 {
     color: #666;
   }
 }
+
+/* Update banner */
+.update-banner {
+  background-color: #e5a00d;
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin: 10px 0;
+  width: 100%;
+  text-align: center;
+}
+
+.update-banner p {
+  margin: 5px 0;
+}
+
+.update-button {
+  background-color: #000;
+  color: #e5a00d;
+  border: none;
+  margin-top: 8px;
+}
+
+.update-button:hover {
+  background-color: #222;
+}
+
+.update-status {
+  font-weight: 500;
+}
+
+.gatekeeper-note {
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.gatekeeper-command {
+  display: block;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  font-size: 11px;
+  margin-top: 4px;
+  cursor: pointer;
+  user-select: all;
+}

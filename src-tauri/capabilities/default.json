@@ -28,6 +28,7 @@
     "core:tray:default",
     "core:window:allow-set-title",
     "store:default",
-    "updater:default"
+    "updater:default",
+    "process:default"
   ]
 }
