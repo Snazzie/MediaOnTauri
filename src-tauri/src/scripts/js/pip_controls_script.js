@@ -8,6 +8,10 @@ let enterPipButton = null;
 
 // Also try to inject on DOMContentLoaded in case the element is present early
 document.addEventListener("DOMContentLoaded", () => {
+    // isPipMode starts as false - backend always starts with PiP disabled
+    // State will be updated via pipChanged events
+    isPipMode = false;
+
     injectPipControls(); // Keep the initial injection attempt
 
     // Use a MutationObserver to watch for the top controls element
@@ -55,6 +59,17 @@ function injectPipControls() {
     if (!topControls) {
         console.error('Top controls element not found');
         return;
+    }
+
+    // Check if buttons are still in the DOM (they may have been removed when navigating videos)
+    if (enterPipButton && !enterPipButton.isConnected) {
+        enterPipButton = null;
+    }
+    if (exitButton && !exitButton.isConnected) {
+        exitButton = null;
+    }
+    if (dragButton && !dragButton.isConnected) {
+        dragButton = null;
     }
 
     // Create PIP button if it doesn't exist
@@ -212,31 +227,18 @@ function removePipControls() {
     // Don't remove the PIP button as we want it to persist
 }
 
-// Listen for PIP state changes
+// Listen for PIP state changes - this is the source of truth
 document.addEventListener('pipChanged', (event) => {
-    isPipMode = event.detail.value;
-    updateButtonVisibility();
-});
+    const newPipMode = event.detail.value;
 
-// Listen for toggle-pip event
-document.addEventListener('toggle-pip', (event) => {
-    const isOnInitialScreen = document.querySelector('.confirmation-container') !== null;
-    if (isOnInitialScreen) {
-        console.debug('Ignoring Alt+P on initial screen in overlay script');
-        return;
+    // Only update if state actually changed
+    if (isPipMode !== newPipMode) {
+        isPipMode = newPipMode;
+
+        if (isPipMode) {
+            injectPipControls();
+        }
+
+        updateButtonVisibility();
     }
-
-    isPipMode = !isPipMode;
-
-    if (isPipMode) {
-        injectPipControls();
-    } else {
-        removePipControls();
-    }
-
-    // Dispatch pipChanged event to sync with other components
-    const pipChangedEvent = new CustomEvent('pipChanged', {
-        detail: { value: isPipMode }
-    });
-    document.dispatchEvent(pipChangedEvent);
 });

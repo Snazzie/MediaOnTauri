@@ -15,7 +15,7 @@
         "title": "Media On Tauri",
         "width": 1024,
         "height": 768,
-        "visible": false,
+        "visible": true,
         "maximized": false,
         "devtools": true
       }
