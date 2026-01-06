@@ -3,10 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
 };
-use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize,
-    Runtime,
-};
+use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Runtime};
 
 // Track PIP state
 static IS_PIP: Lazy<AtomicBool> = Lazy::new(|| AtomicBool::new(false));

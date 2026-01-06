@@ -3,6 +3,12 @@ import { load } from "@tauri-apps/plugin-store";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+
+// Detect if running on macOS
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+const modKey = isMac ? '⌘ Cmd' : 'Ctrl';
+const altKey = isMac ? '⌥ Option' : 'Alt';
+
 function App() {
 	const [error, setError] = useState<string | null>(null);
 	const [plexUrl, setPlexUrl] = useState("https://app.plex.tv/desktop");
@@ -24,7 +30,6 @@ function App() {
 				setZoomLevel(savedZoomLevel);
 			} catch (err) {
 				console.error("Failed during initialization:", err);
-				// Make window visible even if there was an error
 			}
 		};
 
@@ -87,15 +92,38 @@ function App() {
 			<div className="confirmation-container">
 				<h2>Welcome to Plex on Tauri</h2>
 				<p>This application will load Plex in the current window.</p>
-				<div className="zoom-level-display">
-					Zoom: {(zoomLevel * 100).toFixed(0)}%
+
+				<div className="keyboard-shortcuts">
+					<h3>Keyboard Shortcuts</h3>
+					<table className="shortcuts-table">
+						<tbody>
+							<tr>
+								<td className="shortcut-key">{modKey} + / -</td>
+								<td>Adjust zoom level</td>
+							</tr>
+							<tr>
+								<td className="shortcut-key">{altKey} + P</td>
+								<td>Toggle Picture-in-Picture mode</td>
+							</tr>
+							<tr>
+								<td className="shortcut-key">{modKey} + Shift + E</td>
+								<td>Toggle video enhancement (WebGL sharpening)</td>
+							</tr>
+							<tr>
+								<td className="shortcut-key">{modKey} + Shift + F</td>
+								<td>Cycle enhancement presets</td>
+							</tr>
+						</tbody>
+					</table>
+					<p className="enhancement-note">
+						Video enhancement presets: Light, Medium, Strong, Extreme, CAS (Adaptive)
+					</p>
 				</div>
-				<p >
-					Use Ctrl + and Ctrl - to adjust zoom.
-				</p>
-        <p >
-					Use Alt + P to toggle Picture In Picture mode.
-				</p>
+
+				<div className="zoom-level-display">
+					Current Zoom: {(zoomLevel * 100).toFixed(0)}%
+				</div>
+
 				<div className="url-input-container">
 					<label htmlFor="plex-url">Plex Client URL:</label>
 					<input

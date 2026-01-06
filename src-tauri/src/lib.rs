@@ -7,6 +7,7 @@ use handlers::{
 };
 
 use scripts::script::init_script;
+
 #[cfg(any(target_os = "macos", windows, target_os = "linux"))]
 use tauri_plugin_window_state;
 
@@ -14,7 +15,8 @@ use tauri_plugin_window_state;
 pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_store::Builder::default().build());
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init());
 
     // Add window state plugin on desktop platforms with custom configuration
     // Disable automatic window state restoration to prevent maximized state on startup
@@ -31,7 +33,7 @@ pub fn run() {
             toggle_pip,
             is_pip_active,
             drag_window,
-            start_dragging
+            start_dragging,
         ])
         // Use the initialization script for all webviews
         .append_invoke_initialization_script(init_script())

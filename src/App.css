@@ -176,3 +176,61 @@ h2 {
   z-index: 1000;
   /* Ensure it's above the webview */
 }
+
+/* Keyboard Shortcuts Section */
+.keyboard-shortcuts {
+  margin: 20px 0;
+  padding: 15px 20px;
+  background: rgba(229, 160, 13, 0.1);
+  border: 1px solid rgba(229, 160, 13, 0.3);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 450px;
+  box-sizing: border-box;
+}
+
+.keyboard-shortcuts h3 {
+  margin: 0 0 12px 0;
+  color: #e5a00d;
+  font-size: 16px;
+}
+
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.shortcuts-table tr {
+  border-bottom: 1px solid rgba(229, 160, 13, 0.2);
+}
+
+.shortcuts-table tr:last-child {
+  border-bottom: none;
+}
+
+.shortcuts-table td {
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.shortcut-key {
+  font-family: monospace;
+  font-weight: 600;
+  color: #e5a00d;
+  white-space: nowrap;
+  padding-right: 15px;
+}
+
+.enhancement-note {
+  margin: 12px 0 0 0;
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+}
+
+@media (prefers-color-scheme: dark) {
+  .keyboard-shortcuts {
+    background: rgba(229, 160, 13, 0.05);
+  }
+}
