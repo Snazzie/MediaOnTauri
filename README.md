@@ -45,6 +45,18 @@ A lightweight Web Client wrapper with some extra features.
 
 Download the latest release for your platform from the [Releases](https://github.com/Snazzie/MediaOnTauri/releases) page.
 
+### macOS
+
+1. Download the `.dmg` file for your Mac:
+   - **Apple Silicon** (M1/M2/M3/M4): `Media.On.Tauri_x.x.x_aarch64.dmg`
+   - **Intel**: `Media.On.Tauri_x.x.x_x64.dmg`
+2. Open the `.dmg` and drag "Media On Tauri" to your Applications folder
+3. Since the app is not notarized, macOS will block it on first launch. To fix this, run:
+   ```bash
+   xattr -cr /Applications/Media\ On\ Tauri.app
+   ```
+   Alternatively, right-click the app and select "Open", then click "Open" in the dialog.
+
 ### Building from Source
 
 1. Clone this repository

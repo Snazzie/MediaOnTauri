@@ -28,6 +28,16 @@ jobs:
             runner: 'windows-latest'
             args: ''
             rust_target: 'x86_64-pc-windows-msvc'
+          # macOS Apple Silicon (ARM64) build
+          - platform: 'macos-arm64'
+            runner: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            rust_target: 'aarch64-apple-darwin'
+          # macOS Intel (x64) build
+          - platform: 'macos-x64'
+            runner: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            rust_target: 'x86_64-apple-darwin'
 
     runs-on: ${{ matrix.runner }}
     steps:
