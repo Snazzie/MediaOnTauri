@@ -393,7 +393,7 @@
 
         // Save preference
         try {
-            localStorage.setItem('video-enhance-enabled', window.__videoEnhance.enabled ? 'true' : 'false');
+            localStorage.setItem('plex-video-enhance-enabled', window.__videoEnhance.enabled ? 'true' : 'false');
         } catch(e) {}
 
         return window.__videoEnhance.enabled;
@@ -412,7 +412,7 @@
 
         // Save preference
         try {
-            localStorage.setItem('video-filter-index', window.__videoEnhance.filterIndex.toString());
+            localStorage.setItem('plex-video-filter-index', window.__videoEnhance.filterIndex.toString());
         } catch(e) {}
     }
 
