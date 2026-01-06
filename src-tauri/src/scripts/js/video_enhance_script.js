@@ -254,7 +254,6 @@
                 width: ${displayWidth}px;
                 height: ${displayHeight}px;
                 pointer-events: none;
-                z-index: 1;
                 object-fit: ${computedStyle.objectFit || 'contain'};
                 background: transparent;
                 ${isHidden ? 'visibility: hidden;' : ''}
