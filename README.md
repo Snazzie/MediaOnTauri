@@ -55,7 +55,6 @@ Download the latest release for your platform from the [Releases](https://github
    ```bash
    xattr -cr /Applications/Media\ On\ Tauri.app
    ```
-   Alternatively, right-click the app and select "Open", then click "Open" in the dialog.
 
 ### Building from Source
 
