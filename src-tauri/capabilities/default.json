@@ -6,7 +6,9 @@
     "main"
   ],
   "platforms": [
-    "windows"
+    "macOS",
+    "windows",
+    "linux"
   ],
   "permissions": [
     "core:default",
