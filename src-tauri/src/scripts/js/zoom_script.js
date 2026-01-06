@@ -1,7 +1,7 @@
 // Add keyboard shortcut listeners for zoom control
 document.addEventListener('keydown', (event) => {
-    // Check if Ctrl key is pressed
-    if (event.ctrlKey) {
+    // Check if Ctrl key (Windows/Linux) or Cmd key (Mac) is pressed
+    if (event.ctrlKey || event.metaKey) {
         try {
             if (window.__TAURI_INTERNALS__) {
                 // Safely get the current window label
