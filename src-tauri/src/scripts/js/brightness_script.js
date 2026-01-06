@@ -50,11 +50,12 @@ document.addEventListener('keydown', (event) => {
 
     let newBrightness = currentBrightness;
 
-    if (event.altKey && event.key === '[') {
+    // Use event.code to avoid issues with Alt/Option producing special characters on macOS
+    if (event.altKey && (event.code === 'BracketLeft' || event.key === '[')) {
         // Decrease brightness
         newBrightness = Math.max(0.1, currentBrightness - 0.1);
         event.preventDefault(); // Prevent default browser action
-    } else if (event.altKey && event.key === ']') {
+    } else if (event.altKey && (event.code === 'BracketRight' || event.key === ']')) {
         // Increase brightness
         newBrightness = currentBrightness + 0.1;
         event.preventDefault(); // Prevent default browser action
@@ -62,11 +63,18 @@ document.addEventListener('keydown', (event) => {
 
     if (newBrightness !== currentBrightness) {
         // Update the filter property, preserving other filters if any
-        if (brightnessMatch) {
-            video.style.filter = filter.replace(brightnessMatch[0], `brightness(${newBrightness})`);
-        } else {
-            video.style.filter = `${filter} brightness(${newBrightness})`;
+        const newFilter = brightnessMatch
+            ? filter.replace(brightnessMatch[0], `brightness(${newBrightness})`)
+            : `${filter} brightness(${newBrightness})`;
+
+        video.style.filter = newFilter;
+
+        // Also apply to the video enhancement canvas if it exists
+        const enhanceCanvas = document.getElementById('video-enhance-canvas');
+        if (enhanceCanvas) {
+            enhanceCanvas.style.filter = `brightness(${newBrightness})`;
         }
+
         showBrightnessOverlay(newBrightness);
     }
 });
