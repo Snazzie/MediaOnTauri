@@ -215,3 +215,71 @@ h2 {
   font-size: 1em;
   margin: 2px 0;
 }
+
+/* Keyboard shortcuts table */
+.keyboard-shortcuts {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #f6f6f6;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.keyboard-shortcuts h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.1em;
+  color: #e5a00d;
+}
+
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.shortcuts-table td {
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.shortcuts-table tr:not(:last-child) td {
+  border-bottom: 1px solid #444;
+}
+
+.shortcut-key {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  background-color: #444;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.enhancement-note {
+  margin-top: 12px;
+  font-size: 0.85em;
+  color: #aaa;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: light) {
+  .keyboard-shortcuts {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+    color: #333;
+  }
+
+  .shortcut-key {
+    background-color: #ddd;
+  }
+
+  .shortcuts-table tr:not(:last-child) td {
+    border-bottom: 1px solid #ccc;
+  }
+
+  .enhancement-note {
+    color: #666;
+  }
+}

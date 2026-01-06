@@ -5,6 +5,11 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 
+// Detect if running on macOS
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+const modKey = isMac ? '⌘ Cmd' : 'Ctrl';
+const altKey = isMac ? '⌥ Option' : 'Alt';
+
 function App() {
     const [error, setError] = useState<string | null>(null);
     const [url, setUrl] = useState("https://app.plex.tv/desktop");
@@ -108,15 +113,34 @@ function App() {
                 <div className="zoom-level-display">
                     Zoom: {(zoomLevel * 100).toFixed(0)}%
                 </div>
-                <div className="controls">
-                    <p className="control-instruction">
-                        Use Ctrl + and Ctrl - to adjust zoom.
-                    </p>
-                    <p className="control-instruction">
-                        Use Alt + [ and Alt + ] to adjust video brightness.
-                    </p>
-                    <p className="control-instruction">
-                        Use Alt + P to toggle Picture In Picture mode.
+                <div className="keyboard-shortcuts">
+                    <h3>Keyboard Shortcuts</h3>
+                    <table className="shortcuts-table">
+                        <tbody>
+                            <tr>
+                                <td className="shortcut-key">{modKey} + / -</td>
+                                <td>Adjust zoom level</td>
+                            </tr>
+                            <tr>
+                                <td className="shortcut-key">{altKey} + [ / ]</td>
+                                <td>Adjust video brightness</td>
+                            </tr>
+                            <tr>
+                                <td className="shortcut-key">{altKey} + P</td>
+                                <td>Toggle Picture-in-Picture mode</td>
+                            </tr>
+                            <tr>
+                                <td className="shortcut-key">{modKey} + Shift + E</td>
+                                <td>Toggle video enhancement</td>
+                            </tr>
+                            <tr>
+                                <td className="shortcut-key">{modKey} + Shift + F</td>
+                                <td>Cycle enhancement presets</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p className="enhancement-note">
+                        Enhancement presets: Light, Medium, Strong, Extreme, CAS (Adaptive)
                     </p>
                 </div>
 

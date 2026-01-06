@@ -25,6 +25,7 @@ A lightweight Web Client wrapper with some extra features.
 - **Change Url**: Change the URL to any web client server you want. i.e tailscale VPN or local network
 - **Control Video Brightness** Change video brightness with `alt + [`and `alt + ]`.
 - **Picture in Picture Mode**: Toggle between normal and picture-in-picture mode with a simple keyboard shortcut `alt + P`.
+- **Video Enhancement**: Real-time GPU-accelerated sharpening with multiple presets including Contrast Adaptive Sharpening (CAS). See [Video Enhancement Documentation](docs/video-enhancement.md).
 - **RTX VSR**: Works with NVIDIA RTX Super Resolution, making your media extra crisp.
 - **RTX HDR**: Works with NVIDIA RTX HDR, making SDR content better looking on HDR monitors.
 
@@ -48,9 +49,8 @@ Download the latest release for your platform from the [Releases](https://github
 
 1. Clone this repository
 2. Make sure you have [Rust](https://www.rust-lang.org/tools/install) and [Node.js](https://nodejs.org/) installed
-3. Install pnpm: `npm install -g pnpm`
-4. Install dependencies: `pnpm install`
-5. Build the application: `pnpm tauri build`
+3. Install dependencies: `npm install`
+4. Build the application: `npm run tauri build`
 
 ## Development
 
@@ -58,17 +58,16 @@ Download the latest release for your platform from the [Releases](https://github
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/installation)
 - [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
 ### Development Setup
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Start development server
-pnpm tauri dev
+npm run tauri dev
 ```
 ### Recommended IDE Setup
 

@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "lint:fix": "pnpm biome lint --write ./src"
+    "lint:fix": "npx biome lint --write ./src"
   },
   "dependencies": {
     "@tauri-apps/api": "2.5.0",
