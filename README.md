@@ -8,6 +8,11 @@
    <a href="https://github.com/Snazzie/MediaOnTauri/releases/latest">
      <img src="https://img.shields.io/github/v/release/Snazzie/MediaOnTauri?style=flat-square&label=Latest%20Release" alt="Latest Release Version">
    </a>
+   <br/><br/>
+   <a href="https://github.com/Snazzie/MediaOnTauri/releases/latest"><img src="https://img.shields.io/badge/Windows-x64-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Windows x64"></a>
+   <a href="https://github.com/Snazzie/MediaOnTauri/releases/latest"><img src="https://img.shields.io/badge/Windows-ARM64-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Windows ARM64"></a>
+   <a href="https://github.com/Snazzie/MediaOnTauri/releases/latest"><img src="https://img.shields.io/badge/macOS-Intel-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS Intel"></a>
+   <a href="https://github.com/Snazzie/MediaOnTauri/releases/latest"><img src="https://img.shields.io/badge/macOS-Apple%20Silicon-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS Apple Silicon"></a>
 </p>
 A lightweight Web Client wrapper with some extra features.
 
