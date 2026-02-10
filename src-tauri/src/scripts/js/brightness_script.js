@@ -77,4 +77,4 @@ document.addEventListener('keydown', (event) => {
 
         showBrightnessOverlay(newBrightness);
     }
-});
+}, true);
