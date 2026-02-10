@@ -11,17 +11,133 @@
         program: null,
         animationId: null,
         originalVideo: null,
-        videoObserver: null
+        videoObserver: null,
+        isHDRActive: false,
+        usingCSSFilter: false
     };
 
     // Sharpening presets with different kernel strengths
+    // For CSS filter: strength maps to kernel multiplier
     const sharpPresets = [
-        { name: 'Sharpen Light', strength: 0.3 },
-        { name: 'Sharpen Medium', strength: 0.5 },
-        { name: 'Sharpen Strong', strength: 0.8 },
-        { name: 'Sharpen Extreme', strength: 1.2 },
-        { name: 'CAS (Adaptive)', strength: 0.6, cas: true }
+        { name: 'Sharpen Light', strength: 0.3, cssStrength: 0.5 },
+        { name: 'Sharpen Medium', strength: 0.5, cssStrength: 1.0 },
+        { name: 'Sharpen Strong', strength: 0.8, cssStrength: 1.5 },
+        { name: 'Sharpen Extreme', strength: 1.2, cssStrength: 2.5 },
+        { name: 'CAS (Adaptive)', strength: 0.6, cas: true, cssStrength: 1.2 }
     ];
+
+    // HDR Detection Functions
+    function isScreenHDRCapable() {
+        return window.matchMedia('(dynamic-range: high)').matches;
+    }
+
+    // CSS/SVG filter approach for HDR - applies sharpening without capturing video frames
+    function createSVGSharpenFilter(strength) {
+        // Remove existing filter
+        const existingFilter = document.getElementById('video-enhance-svg-filter');
+        if (existingFilter) existingFilter.remove();
+
+        // Sharpening kernel: center = 1 + 4*strength, edges = -strength
+        // This is an unsharp mask convolution
+        const center = 1 + 4 * strength;
+        const edge = -strength;
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.id = 'video-enhance-svg-filter';
+        svg.setAttribute('style', 'position: absolute; width: 0; height: 0;');
+        svg.innerHTML = `
+            <defs>
+                <filter id="sharpen-filter" color-interpolation-filters="sRGB">
+                    <feConvolveMatrix
+                        order="3"
+                        kernelMatrix="0 ${edge} 0 ${edge} ${center} ${edge} 0 ${edge} 0"
+                        preserveAlpha="true"
+                    />
+                </filter>
+            </defs>
+        `;
+        document.body.appendChild(svg);
+        return 'url(#sharpen-filter)';
+    }
+
+    function applyCSSFilter(video, preset) {
+        const filterUrl = createSVGSharpenFilter(preset.cssStrength || preset.strength);
+        video.style.filter = filterUrl;
+        console.log('[VideoEnhance] Applied CSS filter:', filterUrl, 'to video:', video);
+        console.log('[VideoEnhance] Video computed filter:', window.getComputedStyle(video).filter);
+    }
+
+    function removeCSSFilter(video) {
+        if (video) {
+            video.style.filter = '';
+        }
+        const existingFilter = document.getElementById('video-enhance-svg-filter');
+        if (existingFilter) existingFilter.remove();
+    }
+
+    async function detectVideoHDR(video) {
+        const result = {
+            isHDR: false,
+            colorSpace: null,
+            detectionMethod: 'none'
+        };
+
+        // Method 1: requestVideoFrameCallback (Chrome/Edge)
+        if ('requestVideoFrameCallback' in video) {
+            try {
+                const frameResult = await new Promise(resolve => {
+                    const timeoutId = setTimeout(() => resolve(null), 1000);
+                    video.requestVideoFrameCallback((now, metadata) => {
+                        clearTimeout(timeoutId);
+                        console.log('[VideoEnhance] requestVideoFrameCallback metadata:', metadata);
+                        resolve(metadata);
+                    });
+                });
+                if (frameResult?.colorSpace) {
+                    const transfer = frameResult.colorSpace.transfer;
+                    if (transfer === 'pq' || transfer === 'hlg' || transfer === 'smpte2084') {
+                        result.isHDR = true;
+                        result.colorSpace = frameResult.colorSpace;
+                        result.detectionMethod = 'requestVideoFrameCallback';
+                        return result;
+                    }
+                }
+            } catch (e) {
+                console.log('[VideoEnhance] requestVideoFrameCallback error:', e);
+            }
+        }
+
+        // Method 2: Check video.getVideoPlaybackQuality for HDR hints
+        if ('getVideoPlaybackQuality' in video) {
+            const quality = video.getVideoPlaybackQuality();
+            console.log('[VideoEnhance] VideoPlaybackQuality:', quality);
+        }
+
+        // Method 3: Check for WebKit-specific properties
+        console.log('[VideoEnhance] Video element properties:', {
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
+            webkitDecodedFrameCount: video.webkitDecodedFrameCount,
+            webkitDroppedFrameCount: video.webkitDroppedFrameCount,
+        });
+
+        // Method 4: Check MediaSource/SourceBuffer for codec info if available
+        if (video.srcObject || video.src) {
+            console.log('[VideoEnhance] Video source:', video.src || 'srcObject');
+        }
+
+        // Method 5: Heuristic - 4K + HDR-capable screen likely means HDR content
+        // This is a fallback assumption for HDR displays watching high-res content
+        const is4K = video.videoWidth >= 3840 || video.videoHeight >= 2160;
+        if (is4K) {
+            console.log('[VideoEnhance] 4K content detected, assuming HDR on HDR-capable screen');
+            result.isHDR = true;
+            result.detectionMethod = 'heuristic-4k';
+            return result;
+        }
+
+        return result;
+    }
 
     // Vertex shader - simple passthrough
     const vertexShaderSource = `
@@ -34,7 +150,7 @@
         }
     `;
 
-    // Fragment shader with unsharp mask sharpening
+    // Fragment shader with unsharp mask sharpening (SDR - WebGL1)
     const fragmentShaderSource = `
         precision mediump float;
         varying vec2 v_texCoord;
@@ -95,6 +211,78 @@
         }
     `;
 
+    // WebGL2 vertex shader (GLSL ES 3.0)
+    const vertexShaderSourceGL2 = `#version 300 es
+        in vec2 a_position;
+        in vec2 a_texCoord;
+        out vec2 v_texCoord;
+        void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+            v_texCoord = a_texCoord;
+        }
+    `;
+
+    // HDR fragment shader - highp precision, no clamping
+    // Debug: set u_strength to 0.0 for passthrough to test if capture is the issue
+    const fragmentShaderSourceHDR = `#version 300 es
+        precision highp float;
+        in vec2 v_texCoord;
+        out vec4 fragColor;
+        uniform sampler2D u_texture;
+        uniform vec2 u_textureSize;
+        uniform float u_strength;
+        uniform int u_useCAS;
+
+        void main() {
+            vec2 texel = 1.0 / u_textureSize;
+            vec4 center = texture(u_texture, v_texCoord);
+
+            // Debug passthrough - if strength is 0, just output the texture as-is
+            if (u_strength < 0.01) {
+                fragColor = center;
+                return;
+            }
+
+            if (u_useCAS == 1) {
+                // CAS for HDR - same algorithm but without clamping
+                vec4 a = texture(u_texture, v_texCoord + texel * vec2(-1.0, -1.0));
+                vec4 b = texture(u_texture, v_texCoord + texel * vec2( 0.0, -1.0));
+                vec4 c = texture(u_texture, v_texCoord + texel * vec2( 1.0, -1.0));
+                vec4 d = texture(u_texture, v_texCoord + texel * vec2(-1.0,  0.0));
+                vec4 e = center;
+                vec4 f = texture(u_texture, v_texCoord + texel * vec2( 1.0,  0.0));
+                vec4 g = texture(u_texture, v_texCoord + texel * vec2(-1.0,  1.0));
+                vec4 h = texture(u_texture, v_texCoord + texel * vec2( 0.0,  1.0));
+                vec4 i = texture(u_texture, v_texCoord + texel * vec2( 1.0,  1.0));
+
+                vec4 mnRGB = min(min(min(d, e), min(f, b)), h);
+                vec4 mxRGB = max(max(max(d, e), max(f, b)), h);
+                mnRGB = min(min(min(mnRGB, a), min(c, g)), i);
+                mxRGB = max(max(max(mxRGB, a), max(c, g)), i);
+
+                // HDR-safe contrast calculation (avoid division by zero)
+                vec4 ampRGB = (mxRGB - mnRGB) / (mxRGB + 0.001);
+                ampRGB = sqrt(ampRGB);
+
+                float peak = -1.0 / (8.0 - 3.0 * u_strength);
+                vec4 wRGB = ampRGB * peak;
+                vec4 rcpWeightRGB = 1.0 / (1.0 + 4.0 * wRGB);
+
+                fragColor = (b * wRGB + d * wRGB + f * wRGB + h * wRGB + e) * rcpWeightRGB;
+            } else {
+                // Unsharp mask for HDR - no luminance scaling, preserve all values
+                vec4 top = texture(u_texture, v_texCoord + texel * vec2(0.0, -1.0));
+                vec4 left = texture(u_texture, v_texCoord + texel * vec2(-1.0, 0.0));
+                vec4 right = texture(u_texture, v_texCoord + texel * vec2(1.0, 0.0));
+                vec4 bottom = texture(u_texture, v_texCoord + texel * vec2(0.0, 1.0));
+
+                vec4 edges = 4.0 * center - top - left - right - bottom;
+                fragColor = center + edges * u_strength;
+            }
+            fragColor.a = center.a;
+        }
+    `;
+
     function createShader(gl, type, source) {
         const shader = gl.createShader(type);
         gl.shaderSource(shader, source);
@@ -120,22 +308,68 @@
         return program;
     }
 
-    function initWebGL(canvas) {
-        const gl = canvas.getContext('webgl', {
+    function initWebGL(canvas, useHDR = false) {
+        // Try WebGL2 first (required for HDR), fall back to WebGL1
+        const contextOptions = {
             preserveDrawingBuffer: true,
             alpha: true,
             premultipliedAlpha: false,
             antialias: false,
             powerPreference: 'high-performance'
-        });
+        };
+
+        // Add color space for HDR if supported
+        if (useHDR) {
+            contextOptions.colorSpace = 'display-p3';
+        }
+
+        let gl = canvas.getContext('webgl2', contextOptions);
+        const isWebGL2 = !!gl;
+
+        if (!gl) {
+            gl = canvas.getContext('webgl', contextOptions);
+        }
 
         if (!gl) {
             console.error('WebGL not supported');
             return null;
         }
 
-        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        // Check for HDR capability - requires WebGL2 + EXT_color_buffer_float
+        let canDoHDR = false;
+        if (isWebGL2 && useHDR) {
+            const extColorBufferFloat = gl.getExtension('EXT_color_buffer_float');
+            canDoHDR = !!extColorBufferFloat;
+
+            // Try to set color spaces for HDR if available
+            if (canDoHDR) {
+                try {
+                    // Disable automatic color space conversion during texture upload
+                    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+
+                    if ('drawingBufferColorSpace' in gl) {
+                        gl.drawingBufferColorSpace = 'display-p3';
+                    }
+                    if ('unpackColorSpace' in gl) {
+                        gl.unpackColorSpace = 'display-p3';
+                    }
+
+                    console.log('[VideoEnhance] HDR color space config:', {
+                        drawingBufferColorSpace: gl.drawingBufferColorSpace,
+                        unpackColorSpace: gl.unpackColorSpace
+                    });
+                } catch (e) {
+                    console.log('[VideoEnhance] Color space config error:', e);
+                }
+            }
+        }
+
+        // Select appropriate shaders based on HDR capability
+        const vertexSrc = (isWebGL2 && canDoHDR) ? vertexShaderSourceGL2 : vertexShaderSource;
+        const fragmentSrc = (isWebGL2 && canDoHDR) ? fragmentShaderSourceHDR : fragmentShaderSource;
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexSrc);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSrc);
 
         if (!vertexShader || !fragmentShader) return null;
 
@@ -179,14 +413,19 @@
             textureLocation: gl.getUniformLocation(program, 'u_texture'),
             textureSizeLocation: gl.getUniformLocation(program, 'u_textureSize'),
             strengthLocation: gl.getUniformLocation(program, 'u_strength'),
-            useCASLocation: gl.getUniformLocation(program, 'u_useCAS')
+            useCASLocation: gl.getUniformLocation(program, 'u_useCAS'),
+            isHDR: canDoHDR,
+            isWebGL2: isWebGL2,
+            internalFormat: canDoHDR ? gl.RGBA16F : gl.RGBA,
+            textureType: canDoHDR ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE
         };
     }
 
     function renderFrame(video, glContext, preset) {
         const { gl, program, positionBuffer, texCoordBuffer, texture,
                 positionLocation, texCoordLocation, textureLocation,
-                textureSizeLocation, strengthLocation, useCASLocation } = glContext;
+                textureSizeLocation, strengthLocation, useCASLocation,
+                isHDR, internalFormat, textureType } = glContext;
 
         if (video.readyState < 2) {
             // Not enough data - clear to transparent
@@ -202,7 +441,28 @@
 
         // Update texture with current video frame
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+        if (isHDR) {
+            // HDR path: use RGBA16F floating-point texture
+            // Ensure no color space conversion happens
+            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+
+            // Try VideoFrame API for better HDR data access (if available)
+            if (typeof VideoFrame !== 'undefined') {
+                try {
+                    const frame = new VideoFrame(video, { timestamp: 0 });
+                    gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, textureType, frame);
+                    frame.close();
+                } catch (e) {
+                    // Fallback to direct video upload
+                    gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, textureType, video);
+                }
+            } else {
+                gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, textureType, video);
+            }
+        } else {
+            // SDR path: use standard 8-bit texture
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+        }
 
         // Set uniforms
         gl.uniform1i(textureLocation, 0);
@@ -224,9 +484,34 @@
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 
-    function startEnhancement(video) {
+    async function startEnhancement(video) {
         if (window.__videoEnhance.animationId) {
             cancelAnimationFrame(window.__videoEnhance.animationId);
+        }
+
+        // Detect HDR capability and content
+        const screenHDR = isScreenHDRCapable();
+        let videoHDRInfo = { isHDR: false };
+        if (screenHDR) {
+            videoHDRInfo = await detectVideoHDR(video);
+        }
+        const useHDR = screenHDR && videoHDRInfo.isHDR;
+
+        console.log('[VideoEnhance] HDR Detection:', {
+            screenHDR,
+            videoHDR: videoHDRInfo.isHDR,
+            colorSpace: videoHDRInfo.colorSpace,
+            detectionMethod: videoHDRInfo.detectionMethod,
+            useHDR
+        });
+
+        // Note: CSS SVG filters don't work reliably in WebKit for video elements.
+        // For now, always use WebGL. HDR content will have tone mapping applied by the browser
+        // during texture upload, which may cause some highlight clipping.
+        // TODO: Revisit when WebKit adds better HDR canvas/WebGL support.
+        if (useHDR) {
+            console.log('[VideoEnhance] HDR detected - using WebGL path (CSS filters not supported in WebKit)');
+            console.log('[VideoEnhance] Note: HDR highlights may appear slightly clipped');
         }
 
         // Create canvas overlay
@@ -271,8 +556,8 @@
             videoParent.appendChild(canvas);
         }
 
-        // Initialize WebGL
-        const glContext = initWebGL(canvas);
+        // Initialize WebGL with HDR flag
+        const glContext = initWebGL(canvas, useHDR);
         if (!glContext) {
             console.error('Failed to initialize WebGL');
             canvas.remove();
@@ -283,6 +568,13 @@
         window.__videoEnhance.glContext = glContext;
         window.__videoEnhance.originalVideo = video;
         window.__videoEnhance.videoHidden = false;
+        window.__videoEnhance.isHDRActive = glContext.isHDR;
+
+        console.log('[VideoEnhance] WebGL initialized:', {
+            isWebGL2: glContext.isWebGL2,
+            isHDR: glContext.isHDR,
+            textureFormat: glContext.isHDR ? 'RGBA16F' : 'RGBA8'
+        });
 
         // Render loop - uses a flag to track if this specific enhancement is active
         let isActive = true;
@@ -314,6 +606,12 @@
     }
 
     function stopEnhancement() {
+        // Remove CSS filter if using HDR path
+        if (window.__videoEnhance.usingCSSFilter) {
+            removeCSSFilter(window.__videoEnhance.originalVideo);
+            window.__videoEnhance.usingCSSFilter = false;
+        }
+
         // Stop the render loop first
         if (window.__videoEnhance.stopRender) {
             window.__videoEnhance.stopRender();
@@ -341,6 +639,7 @@
 
         window.__videoEnhance.glContext = null;
         window.__videoEnhance.videoHidden = false;
+        window.__videoEnhance.isHDRActive = false;
     }
 
     // Find video element
@@ -360,7 +659,7 @@
     }
 
     // Toggle enhancement
-    function toggleEnhancement() {
+    async function toggleEnhancement() {
         // If currently enabled, turn off
         if (window.__videoEnhance.enabled) {
             window.__videoEnhance.enabled = false;
@@ -374,12 +673,13 @@
                 // Stop any existing enhancement first
                 stopEnhancement();
 
-                const success = startEnhancement(video);
+                const success = await startEnhancement(video);
                 if (success) {
                     window.__videoEnhance.enabled = true;
                     window.__videoEnhance.savedEnabled = true;
                     const preset = sharpPresets[window.__videoEnhance.filterIndex];
-                    showNotification(`Enhancement: ${preset.name}`);
+                    const hdrIndicator = window.__videoEnhance.isHDRActive ? ' (HDR)' : '';
+                    showNotification(`Enhancement: ${preset.name}${hdrIndicator}`);
                 } else {
                     window.__videoEnhance.enabled = false;
                     window.__videoEnhance.savedEnabled = false;
@@ -399,15 +699,21 @@
     }
 
     // Cycle through presets
-    function cycleFilterStrength() {
+    async function cycleFilterStrength() {
         if (!window.__videoEnhance.enabled) {
-            toggleEnhancement();
+            await toggleEnhancement();
             return;
         }
 
         window.__videoEnhance.filterIndex = (window.__videoEnhance.filterIndex + 1) % sharpPresets.length;
         const preset = sharpPresets[window.__videoEnhance.filterIndex];
-        showNotification(`Filter: ${preset.name}`);
+        const hdrIndicator = window.__videoEnhance.isHDRActive ? ' (HDR)' : '';
+        showNotification(`Filter: ${preset.name}${hdrIndicator}`);
+
+        // Update CSS filter if using HDR path
+        if (window.__videoEnhance.usingCSSFilter && window.__videoEnhance.originalVideo) {
+            applyCSSFilter(window.__videoEnhance.originalVideo, preset);
+        }
 
         // Save preference
         try {
@@ -456,16 +762,17 @@
     }
 
     // Auto-enable enhancement if it was previously on
-    function autoEnableIfNeeded() {
+    async function autoEnableIfNeeded() {
         // Only auto-enable if saved preference is on AND we're not currently enhanced
         if (!window.__videoEnhance.enabled && window.__videoEnhance.savedEnabled) {
             const video = findVideoElement();
             if (video && video.readyState >= 2) {
-                const success = startEnhancement(video);
+                const success = await startEnhancement(video);
                 if (success) {
                     window.__videoEnhance.enabled = true;
                     const preset = sharpPresets[window.__videoEnhance.filterIndex];
-                    showNotification(`Enhancement: ${preset.name}`);
+                    const hdrIndicator = window.__videoEnhance.isHDRActive ? ' (HDR)' : '';
+                    showNotification(`Enhancement: ${preset.name}${hdrIndicator}`);
                 }
             }
         }
