@@ -1,23 +1,26 @@
-import { useState, useEffect } from "react";
 import { load } from "@tauri-apps/plugin-store";
+import { useEffect, useState } from "react";
 import "./App.css";
-import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
-import { check } from "@tauri-apps/plugin-updater";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { check } from "@tauri-apps/plugin-updater";
 
 // Detect if running on macOS
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-const modKey = isMac ? '⌘ Cmd' : 'Ctrl';
-const altKey = isMac ? '⌥ Option' : 'Alt';
+const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+const modKey = isMac ? "⌘ Cmd" : "Ctrl";
+const altKey = isMac ? "⌥ Option" : "Alt";
 
 function App() {
     const [error, setError] = useState<string | null>(null);
     const [url, setUrl] = useState("https://app.plex.tv/desktop");
     const [zoomLevel, setZoomLevel] = useState(1.0);
     const [tauriVersion, setTauriVersion] = useState<string | null>(null);
-    const [updateAvailable, setUpdateAvailable] = useState<{ version: string; body: string } | null>(null);
+    const [updateAvailable, setUpdateAvailable] = useState<{
+        version: string;
+        body: string;
+    } | null>(null);
     const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
     // Load saved URL from store and set up initial window state when component mounts
@@ -43,7 +46,10 @@ function App() {
                 try {
                     const update = await check();
                     if (update) {
-                        setUpdateAvailable({ version: update.version, body: update.body || "" });
+                        setUpdateAvailable({
+                            version: update.version,
+                            body: update.body || "",
+                        });
                     }
                 } catch {
                     // Silently fail - update check is not critical
@@ -94,7 +100,9 @@ function App() {
                         case "Progress":
                             downloaded += event.data.chunkLength;
                             if (contentLength > 0) {
-                                const percent = Math.round((downloaded / contentLength) * 100);
+                                const percent = Math.round(
+                                    (downloaded / contentLength) * 100,
+                                );
                                 setUpdateStatus(`Downloading: ${percent}%`);
                             }
                             break;
@@ -132,114 +140,162 @@ function App() {
 
     if (error) {
         return (
-            <div className="error-container">
-                <h2>Error Loading Url</h2>
-                <p>{error}</p>
-                <button onClick={() => window.location.reload()} type="button">
-                    Retry
-                </button>
-            </div>
+            <>
+                <div className="app-bg" />
+                <div className="launch-screen">
+                    <div className="error-card">
+                        <h2>Error Loading URL</h2>
+                        <p>{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            type="button"
+                            className="secondary-button"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </>
         );
     }
 
     return (
         <>
-            <div className="confirmation-container">
-                <h2>Welcome to Media On Tauri</h2>
-                {tauriVersion && <p>App Version: {tauriVersion}</p>}
-                {updateAvailable && (
-                    <div className="update-banner">
-                        <p>Update available: v{updateAvailable.version}</p>
-                        {updateStatus ? (
-                            <p className="update-status">{updateStatus}</p>
-                        ) : (
-                            <button onClick={installUpdate} type="button" className="update-button">
-                                Install Update
-                            </button>
+            <div className="app-bg" />
+            <div className="launch-screen">
+                <div className="launch-card">
+                    {/* Header */}
+                    <div className="launch-header">
+                        <h2 className="launch-title">Media On Tauri</h2>
+                        {tauriVersion && (
+                            <span className="version-badge">v{tauriVersion}</span>
                         )}
-                        {isMac && (
-                            <p className="gatekeeper-note">
-                                After updating, run in Terminal to bypass Gatekeeper:
-                                <code className="gatekeeper-command">xattr -cr /Applications/Media\ On\ Tauri.app</code>
-                            </p>
-                        )}
+                        <a
+                            className="github-link"
+                            href="https://github.com/Snazzie/MediaOnTauri"
+                            target="_blank"
+                            aria-label="GitHub Repository"
+                            rel="noreferrer"
+                        >
+                            github.com/Snazzie/MediaOnTauri
+                        </a>
                     </div>
-                )}
-                <p>
-                    Repository:{" "}
-                    <a
-                        href="https://github.com/Snazzie/MediaOnTauri"
-                        target="_blank"
-                        aria-label="GitHub Repository"
-                        rel="noreferrer"
-                    >
-                        https://github.com/Snazzie/MediaOnTauri
-                    </a>
-                </p>
-                <div className="zoom-level-display">
-                    Zoom: {(zoomLevel * 100).toFixed(0)}%
-                </div>
-                <div className="keyboard-shortcuts">
-                    <h3>Keyboard Shortcuts</h3>
-                    <table className="shortcuts-table">
-                        <tbody>
-                            <tr>
-                                <td className="shortcut-key">{modKey} + / -</td>
-                                <td>Adjust zoom level</td>
-                            </tr>
-                            <tr>
-                                <td className="shortcut-key">{altKey} + [ / ]</td>
-                                <td>Adjust video brightness</td>
-                            </tr>
-                            <tr>
-                                <td className="shortcut-key">{altKey} + P</td>
-                                <td>Toggle Picture-in-Picture mode</td>
-                            </tr>
-                            <tr>
-                                <td className="shortcut-key">{modKey} + Shift + E</td>
-                                <td>Toggle video enhancement</td>
-                            </tr>
-                            <tr>
-                                <td className="shortcut-key">{modKey} + Shift + F</td>
-                                <td>Cycle enhancement presets</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p className="enhancement-note">
-                        Enhancement presets: Light, Medium, Strong, Extreme, CAS (Adaptive)
-                    </p>
-                </div>
 
-                <div className="url-input-container">
-                    <label htmlFor="url">Web Client URL:</label>
-                    <input
-                        id="url"
-                        type="text"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="Enter Web Client URL"
-                    />
-                </div>
+                    {/* Update banner */}
+                    {updateAvailable && (
+                        <div className="update-banner">
+                            <p>Update available: v{updateAvailable.version}</p>
+                            {updateStatus ? (
+                                <p className="update-status">{updateStatus}</p>
+                            ) : (
+                                <button
+                                    onClick={installUpdate}
+                                    type="button"
+                                    className="update-button"
+                                >
+                                    Install Update
+                                </button>
+                            )}
+                            {isMac && (
+                                <p className="gatekeeper-note">
+                                    After updating, run in Terminal to bypass Gatekeeper:
+                                    <code className="gatekeeper-command">
+                                        xattr -cr /Applications/Media\ On\ Tauri.app
+                                    </code>
+                                </p>
+                            )}
+                        </div>
+                    )}
 
-                <p className="url-help-text">
-                    Examples: <br />- Default Plex: https://app.plex.tv/desktop <br />-
-                    Local Plex: http://192.168.1.100:32400/web <br />- Tailscale:
-                    http://plexserver:32400/web
-                </p>
-                <button onClick={loadUrl} type="button">
-                    Continue to Web Client
-                </button>
-            </div>
+                    <hr />
 
-            {error && (
-                <div className="error-container">
-                    <h2>Error Loading Plex</h2>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()} type="button">
-                        Retry
+                    {/* Keyboard shortcuts */}
+                    <div className="shortcuts-section">
+                        <span className="section-label">Keyboard Shortcuts</span>
+                        <div className="shortcut-row">
+                            <span className="shortcut-keys">
+                                <kbd>{modKey}</kbd>
+                                <kbd>+ / -</kbd>
+                            </span>
+                            <span className="shortcut-desc">Adjust zoom level</span>
+                        </div>
+                        <div className="shortcut-row">
+                            <span className="shortcut-keys">
+                                <kbd>{altKey}</kbd>
+                                <kbd>[ / ]</kbd>
+                            </span>
+                            <span className="shortcut-desc">Adjust video brightness</span>
+                        </div>
+                        <div className="shortcut-row">
+                            <span className="shortcut-keys">
+                                <kbd>{altKey}</kbd>
+                                <kbd>P</kbd>
+                            </span>
+                            <span className="shortcut-desc">
+                                Toggle Picture-in-Picture
+                            </span>
+                        </div>
+                        <div className="shortcut-row">
+                            <span className="shortcut-keys">
+                                <kbd>{modKey}</kbd>
+                                <kbd>Shift</kbd>
+                                <kbd>E</kbd>
+                            </span>
+                            <span className="shortcut-desc">
+                                Toggle video enhancement
+                            </span>
+                        </div>
+                        <div className="shortcut-row">
+                            <span className="shortcut-keys">
+                                <kbd>{modKey}</kbd>
+                                <kbd>Shift</kbd>
+                                <kbd>F</kbd>
+                            </span>
+                            <span className="shortcut-desc">
+                                Cycle enhancement presets
+                            </span>
+                        </div>
+                        <p className="enhancement-note">
+                            Presets: Light, Medium, Strong, Extreme, CAS (Adaptive)
+                        </p>
+                    </div>
+
+                    <hr />
+
+                    {/* URL input */}
+                    <div className="url-section">
+                        <span className="section-label">Web Client URL</span>
+                        <input
+                            id="url"
+                            type="text"
+                            className="url-input"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            placeholder="Enter Web Client URL"
+                        />
+                        <div className="url-examples">
+                            <span className="url-example">
+                                <span className="url-example-label">Default Plex: </span>
+                                https://app.plex.tv/desktop
+                            </span>
+                            <span className="url-example">
+                                <span className="url-example-label">Local Plex: </span>
+                                http://192.168.1.100:32400/web
+                            </span>
+                            <span className="url-example">
+                                <span className="url-example-label">Tailscale: </span>
+                                http://plexserver:32400/web
+                            </span>
+                        </div>
+                    </div>
+
+                    <button onClick={loadUrl} type="button" className="primary-button">
+                        Continue to Web Client
                     </button>
                 </div>
-            )}
+            </div>
+
+            <div className="zoom-display">Zoom: {(zoomLevel * 100).toFixed(0)}%</div>
         </>
     );
 }
